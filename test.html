@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Connection Test</title>
+</head>
+<body>
+    <h1>Testing Connection to FastAPI Server...</h1>
+    <p id="status" style="font-size: 1.5rem; font-weight: bold;">Fetching...</p>
+
+    <script>
+        fetch('http://127.0.0.1:8000/')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Server responded, but with an error status: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // SUCCESS
+                const statusElement = document.getElementById('status');
+                statusElement.innerText = '✅ Success! Response: ' + JSON.stringify(data);
+                statusElement.style.color = 'green';
+            })
+            .catch(error => {
+                // FAILURE
+                const statusElement = document.getElementById('status');
+                statusElement.innerText = '❌ Failed to connect! Error: ' + error;
+                statusElement.style.color = 'red';
+            });
+    </script>
+</body>
+</html>

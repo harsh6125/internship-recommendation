@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Internship Recommender</title>
+    <style>
+        /* CSS is slightly updated for new elements */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f4f7f6; color: #333; margin: 0; padding: 20px;
+            display: flex; justify-content: center;
+        }
+        .container { max-width: 800px; width: 100%; }
+        h1, h2 { text-align: center; color: #005f73; }
+        form { background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-group { display: flex; flex-direction: column; }
+        label { margin-bottom: 5px; font-weight: 600; }
+        input, textarea { padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 1rem; }
+        textarea { resize: vertical; min-height: 60px; }
+        button {
+            grid-column: 1 / -1; padding: 12px; background-color: #0a9396; color: white;
+            border: none; border-radius: 4px; font-size: 1.1rem; cursor: pointer; transition: background-color 0.2s;
+        }
+        button:hover { background-color: #005f73; }
+        #loading { text-align: center; font-size: 1.2rem; padding: 20px; }
+        .user-profile-card, .internship-card {
+            background: #fff; padding: 20px; border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08); margin-bottom: 20px;
+        }
+        .user-profile-card { border-left: 5px solid #0a9396; }
+        .internship-card { border-left: 5px solid #94d2bd; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; }
+        .card-header h3 { margin-top: 0; color: #001219; }
+        p { margin: 5px 0; line-height: 1.5; }
+        .card-footer { margin-top: 15px; padding-top: 10px; border-top: 1px solid #eee; font-size: 0.9rem; color: #555; }
+        .action-buttons button { margin-left: 10px; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; }
+        .edit-btn { background-color: #ee9b00; color: white; }
+        .delete-btn { background-color: #ae2012; color: white; }
+        .auth-toggle { text-align: center; margin-top: 15px; }
+        .auth-toggle a { color: #005f73; cursor: pointer; text-decoration: underline; }
+        .hidden { display: none; }
+        nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;}
+        #logout-btn { background-color: #bb3e03; padding: 8px 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Internship Recommender</h1>
+
+        <div id="auth-container">
+            <form id="login-form">
+                <h2>Login</h2>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label for="login-username">Username</label>
+                    <input type="text" id="login-username" required>
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <button type="submit">Login</button>
+                <div class="auth-toggle">
+                    <p>Don't have an account? <a onclick="toggleAuthForms()">Register here</a></p>
+                </div>
+            </form>
+
+            <form id="register-form" class="hidden">
+                <h2>Register</h2>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label for="register-username">Username</label>
+                    <input type="text" id="register-username" required>
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label for="register-password">Password</label>
+                    <input type="password" id="register-password" required>
+                </div>
+                <button type="submit">Register</button>
+                <div class="auth-toggle">
+                     <p>Already have an account? <a onclick="toggleAuthForms()">Login here</a></p>
+                </div>
+            </form>
+        </div>
+
+        <div id="app-container" class="hidden">
+            <nav>
+                <span id="welcome-message"></span>
+                <button id="logout-btn" onclick="handleLogout()">Logout</button>
+            </nav>
+            <div id="profile-management-container">
+                </div>
+            <div id="results-container">
+                <div id="loading" class="hidden">Finding the best internships for you...</div>
+                <div id="recommendations"></div>
+            </div>
+        </div>
+    </div>
+    
+    <template id="profile-form-template">
+         <form id="profile-form">
+            <h2 id="form-title">Create Your Profile</h2>
+            <div class="form-grid">
+                <div class="form-group"><label for="name">Full Name</label><input type="text" id="name" name="name" required placeholder="e.g., Priya Singh"></div>
+                <div class="form-group"><label for="major">Major</label><input type="text" id="major" name="major" required placeholder="e.g., Data Science"></div>
+                <div class="form-group"><label for="skills">Your Skills (comma-separated)</label><textarea id="skills" name="skills" required placeholder="e.g., Python, SQL, Tableau"></textarea></div>
+                <div class="form-group"><label for="locations">Preferred Locations (comma-separated)</label><textarea id="locations" name="locations" placeholder="e.g., Gurgaon, Remote"></textarea></div>
+                <div class="form-group"><label for="stipend">Minimum Expected Stipend (₹/month)</label><input type="number" id="stipend" name="stipend" placeholder="e.g., 10000"></div>
+                <div class="form-group"><label for="duration">Max Duration (in months)</label><input type="number" id="duration" name="duration" placeholder="e.g., 3"></div>
+                <button id="submit-btn" type="submit">Get Recommendations</button>
+            </div>
+        </form>
+    </template>
+    
+    <template id="user-profile-card-template">
+        <div class="user-profile-card">
+            <div class="card-header">
+                <h3 id="profile-card-name"></h3>
+                <div class="action-buttons">
+                    <button class="edit-btn" onclick="handleEdit()">Edit</button>
+                    <button class="delete-btn" onclick="handleDelete()">Delete</button>
+                </div>
+            </div>
+            <p><strong>Major:</strong> <span id="profile-card-major"></span></p>
+            <p><strong>Skills:</strong> <span id="profile-card-skills"></span></p>
+        </div>
+    </template>
+
+
+    <script>
+        // --- FULLY UPGRADED JavaScript Logic with Authentication ---
+
+        // Element references
+        const authContainer = document.getElementById('auth-container');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const appContainer = document.getElementById('app-container');
+        const welcomeMessage = document.getElementById('welcome-message');
+        const profileManagementContainer = document.getElementById('profile-management-container');
+        const loadingDiv = document.getElementById('loading');
+        const recommendationsDiv = document.getElementById('recommendations');
+        const profileFormTemplate = document.getElementById('profile-form-template');
+        const userProfileCardTemplate = document.getElementById('user-profile-card-template');
+
+        const API_URL = 'http://127.0.0.1:8000';
+        
+        // --- State Management ---
+        let currentProfile = null;
+        
+        // --- UTILITY FUNCTIONS ---
+        function showError(message, container = recommendationsDiv) {
+             console.error('An error occurred:', message);
+             container.innerHTML = `<p style="color: red; text-align: center;">${message}</p>`;
+        }
+
+        function toggleAuthForms() {
+            loginForm.classList.toggle('hidden');
+            registerForm.classList.toggle('hidden');
+        }
+
+        function setAuthState(isLoggedIn) {
+            if (isLoggedIn) {
+                authContainer.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                welcomeMessage.innerText = `Welcome, ${localStorage.getItem('username')}!`;
+            } else {
+                authContainer.classList.remove('hidden');
+                appContainer.classList.add('hidden');
+                localStorage.removeItem('token');
+                localStorage.removeItem('username');
+                currentProfile = null;
+            }
+        }
+
+        // --- AUTHENTICATION LOGIC ---
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const formData = new URLSearchParams();
+                formData.append('username', username);
+                formData.append('password', password);
+
+                const response = await fetch(`${API_URL}/token`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+                if (!response.ok) throw new Error('Incorrect username or password.');
+                
+                const data = await response.json();
+                localStorage.setItem('token', data.access_token);
+                localStorage.setItem('username', username); // Store username for welcome message
+                
+                setAuthState(true);
+                // After login, we need to check if the user already has a profile
+                // This is a placeholder for a future function
+                // For now, we will just show the create form.
+                showCreateProfileForm();
+
+            } catch (error) {
+                showError(error.message, document.querySelector('#login-form .auth-toggle'));
+            }
+        });
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('register-username').value;
+            const password = document.getElementById('register-password').value;
+
+            try {
+                const response = await fetch(`${API_URL}/users/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                if (!response.ok) throw new Error('Username may already be taken.');
+                alert('Registration successful! Please log in.');
+                toggleAuthForms(); // Switch back to login form
+                registerForm.reset();
+            } catch (error) {
+                showError(error.message, document.querySelector('#register-form .auth-toggle'));
+            }
+        });
+
+        function handleLogout() {
+            setAuthState(false);
+            showCreateProfileForm(); // Ensure form is visible after logout
+        }
+        
+        // --- MAIN APP LOGIC (Profile Management & Recommendations) ---
+
+        // Helper to get auth headers
+        function getAuthHeaders() {
+            const token = localStorage.getItem('token');
+            if (!token) return null;
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            };
+        }
+        
+        function showCreateProfileForm() {
+            profileManagementContainer.innerHTML = ''; // Clear old content
+            const formNode = profileFormTemplate.content.cloneNode(true);
+            profileManagementContainer.appendChild(formNode);
+            // Re-attach event listener to the new form
+            const newForm = document.getElementById('profile-form');
+            newForm.addEventListener('submit', handleProfileSubmit);
+        }
+
+        // ... continue with other functions in the next block ...
+    </script>
+    <script>
+        // --- Continued from above ---
+
+        async function handleProfileSubmit(event) {
+            event.preventDefault();
+            loadingDiv.classList.remove('hidden');
+            recommendationsDiv.innerHTML = '';
+            
+            const form = event.target;
+            const formData = new FormData(form);
+            const studentProfileData = {
+                name: formData.get('name'), major: formData.get('major'),
+                skills: formData.get('skills').split(',').map(s => s.trim()).filter(s => s),
+                preferred_locations: formData.get('locations').split(',').map(s => s.trim()).filter(s => s),
+                min_expected_stipend: parseInt(formData.get('stipend')) || 0,
+                max_duration_months: parseInt(formData.get('duration')) || 12,
+                preferred_intern_types: [], preferred_perks: []
+            };
+
+            try {
+                let profile;
+                const headers = getAuthHeaders();
+                if (!headers) throw new Error("You are not logged in.");
+
+                if (currentProfile) {
+                    // UPDATE
+                    const response = await fetch(`${API_URL}/profile/${currentProfile._id}`, {
+                        method: 'PUT', headers, body: JSON.stringify(studentProfileData)
+                    });
+                    if (!response.ok) throw new Error('Failed to update profile.');
+                    profile = await response.json();
+                } else {
+                    // CREATE
+                    // Note: This assumes one profile per user. A real app would check if a profile exists first.
+                    const response = await fetch(`${API_URL}/profile`, {
+                        method: 'POST', headers, body: JSON.stringify(studentProfileData)
+                    });
+                    if (!response.ok) throw new Error('Failed to create profile.');
+                    profile = await response.json();
+                }
+                
+                currentProfile = profile;
+                displayUserProfile(profile);
+                await getAndDisplayRecommendations(profile._id);
+
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                loadingDiv.classList.add('hidden');
+            }
+        }
+        
+        function displayUserProfile(profile) {
+            profileManagementContainer.innerHTML = ''; // Clear form
+            const cardNode = userProfileCardTemplate.content.cloneNode(true);
+            cardNode.getElementById('profile-card-name').innerText = profile.name;
+            cardNode.getElementById('profile-card-major').innerText = profile.major;
+            cardNode.getElementById('profile-card-skills').innerText = profile.skills.join(', ');
+            profileManagementContainer.appendChild(cardNode);
+        }
+        
+        async function getAndDisplayRecommendations(id) {
+            const headers = getAuthHeaders();
+            if (!headers) return; // Don't fetch if not logged in
+            
+            const response = await fetch(`${API_URL}/recommendations/${id}`, { headers });
+            if (!response.ok) throw new Error('Failed to get recommendations.');
+            const recommendations = await response.json();
+            displayRecommendations(recommendations);
+        }
+
+        function displayRecommendations(internships) {
+            recommendationsDiv.innerHTML = ''; // Clear previous
+            if (internships.length === 0) {
+                recommendationsDiv.innerHTML = '<p style="text-align: center;">No matching internships found.</p>';
+                return;
+            }
+            internships.forEach(internship => {
+                const card = document.createElement('div');
+                card.className = 'internship-card';
+                card.innerHTML = `
+                    <h3>${internship.Role}</h3>
+                    <p><strong>Company:</strong> ${internship['Company Name']}</p>
+                    <p><strong>Location:</strong> ${internship.Location}</p>
+                    <div class="card-footer">
+                        <span><strong>Stipend:</strong> ${internship.Stipend}</span> | 
+                        <span><strong>Duration:</strong> ${internship.Duration}</span>
+                    </div>
+                `;
+                recommendationsDiv.appendChild(card);
+            });
+        }
+        
+        async function handleEdit() {
+            showCreateProfileForm(); // Show the form again
+            const form = document.getElementById('profile-form');
+            
+            // Populate the form with the current profile's data
+            form.querySelector('#name').value = currentProfile.name;
+            form.querySelector('#major').value = currentProfile.major;
+            form.querySelector('#skills').value = currentProfile.skills.join(', ');
+            // ... populate other fields similarly ...
+            form.querySelector('#form-title').innerText = 'Update Your Profile';
+            form.querySelector('#submit-btn').innerText = 'Update Profile';
+            recommendationsDiv.innerHTML = '';
+        }
+
+        async function handleDelete() {
+            if (!confirm('Are you sure?')) return;
+            const headers = getAuthHeaders();
+            try {
+                const response = await fetch(`${API_URL}/profile/${currentProfile._id}`, { method: 'DELETE', headers });
+                if (!response.ok) throw new Error('Failed to delete profile.');
+                alert('Profile deleted successfully!');
+                currentProfile = null;
+                recommendationsDiv.innerHTML = '';
+                showCreateProfileForm();
+            } catch(error) {
+                showError(error.message);
+            }
+        }
+        
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                setAuthState(true);
+                 // In a real app, you'd fetch the user's existing profile here
+                 // For now, we just show the create form
+                showCreateProfileForm();
+            } else {
+                setAuthState(false);
+            }
+        });
+    </script>
+
+</body>
+</html>
