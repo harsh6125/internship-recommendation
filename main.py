@@ -115,8 +115,47 @@ async def create_student_profile(
     raise HTTPException(status_code=500, detail="Error creating student profile")
 
 # main.py (add this new function)
+@app.get("/profile", response_model=StudentProfile)
+async def get_my_profile(current_user: User = Depends(get_current_user)):
+    """
+    Fetches the profile for the currently logged-in user.
+    """
+    # Find the profile in the database that belongs to the current user
+    profile = await student_collection.find_one({"owner_username": current_user["username"]})
+    
+    # If a profile is found, return it
+    if profile:
+        return profile
+    
+    # If no profile is found, raise a 404 error
+    raise HTTPException(status_code=404, detail="Student profile not found.")
+#
 
-# --- USER AUTHENTICATION ENDPOINTS ---
+@app.put("/profile", response_model=StudentProfile)
+async def update_my_profile(
+    profile_data: StudentProfileCreate = Body(...), 
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Updates the profile for the currently logged-in user.
+    """
+    # Convert the incoming profile data to a dictionary
+    profile_dict = profile_data.model_dump()
+
+    # Find the user's existing profile and update it with the new data
+    update_result = await student_collection.update_one(
+        {"owner_username": current_user["username"]},
+        {"$set": profile_dict}
+    )
+
+    # If a profile was found and updated, fetch and return the updated profile
+    if update_result.matched_count > 0:
+        updated_profile = await student_collection.find_one({"owner_username": current_user["username"]})
+        if updated_profile:
+            return updated_profile
+            
+    # If no profile was found to update, raise a 404 error
+    raise HTTPException(status_code=404, detail="Student profile not found.")
 
 @app.post("/users/register", response_model=User, status_code=status.HTTP_201_CREATED)
 async def register_user(user_data: UserCreate = Body(...)):
